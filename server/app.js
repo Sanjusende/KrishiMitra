@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { doubleCsrf } from 'csrf-csrf';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import env from './config/env.js';
@@ -53,8 +54,22 @@ app.use(
   })
 );
 
+const {
+  generateToken,
+  doubleCsrfProtection,
+} = doubleCsrf({
+  getSecret: () => env.JWT_SECRET,
+  cookieName: '__Host-csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
+  },
+});
+
 app.use(cors(corsOptions));
 app.use(cookieParser());
+app.use(doubleCsrfProtection);
 app.use(compressionMiddleware);
 app.use(loggerMiddleware);
 
@@ -116,6 +131,12 @@ app.get('/', (req, res) => {
     message: 'SmartFarm API Running',
   });
 });
+
+app.get('/api/csrf-token', (req, res) => {
+  res.json({
+    csrfToken: generateToken(req, res),
+  });
+});
 app.get('/api/health', generalLimiter, healthCheck);
 app.get('/api/v1/health', generalLimiter, healthCheck);
 
@@ -123,7 +144,8 @@ app.get('/api/v1/health', generalLimiter, healthCheck);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Authentication Routes mount points
-app.use('/api/auth', authLimiter, authRoutes);
+// app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authLimiter, doubleCsrfProtection, authRoutes);
 app.use('/api/v1/auth', authLimiter, authRoutes);
 
 // Farm Routes mount points
