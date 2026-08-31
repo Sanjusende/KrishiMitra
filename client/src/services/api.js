@@ -58,10 +58,20 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      'An unexpected error occurred';
+    let message = 'An unexpected error occurred';
+
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        message = 'Connection timed out. Please check your internet speed and try again.';
+      } else {
+        message = 'Unable to connect to the server. Please check your internet connection and try again.';
+      }
+    } else {
+      message =
+        error.response.data?.message ||
+        error.response.data?.error ||
+        'An unexpected error occurred';
+    }
 
     // Automatic token refresh retry for 401 Unauthorized
     if (status === 401 && originalRequest && !originalRequest._retry) {
@@ -100,6 +110,7 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
     }
 
+    error.message = message;
     console.error(`API Error [${status || 'NETWORK_ERROR'}]:`, message);
     return Promise.reject(error);
   }

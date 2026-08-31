@@ -5,8 +5,16 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      protocol: 'ws',
+      host: '127.0.0.1',
+      port: 5173,
+    },
     proxy: {
-      '/api': { target: 'https://hackinmotion-ricr-him-1157-1.onrender.com', changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:5000', changeOrigin: true },
     },
   },
 });

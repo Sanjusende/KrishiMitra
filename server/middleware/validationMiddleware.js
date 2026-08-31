@@ -10,7 +10,7 @@ export const validateRequest = (req, res, next) => {
     return ApiResponse.error(
       res,
       'Input Validation Failed',
-      400,
+      422,
       'VALIDATION_ERROR',
       errors.array()
     );

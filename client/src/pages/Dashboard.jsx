@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getDashboardSummary, getDashboardAnalytics } from '../services/dashboardService';
 import { getWeatherForecast } from '../services/weatherService';
 import { getMarketHistory } from '../services/marketService';
+import { getCropRecommendations } from '../services/cropRecommendationService';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
@@ -162,6 +163,7 @@ const Dashboard = () => {
   const [weatherMetric, setWeatherMetric] = useState('temp'); // 'temp' | 'rain' | 'humidity'
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
+  const [cropRecommendations, setCropRecommendations] = useState([]);
 
   // UI States
   const [loading, setLoading] = useState(true);
@@ -193,12 +195,35 @@ const Dashboard = () => {
     try {
       const res = await getWeatherForecast();
       if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-        setForecastData(res.data);
+        const formatted = res.data.map((f, idx) => {
+          const dateObj = new Date(f.date);
+          const dayName = idx === 0 ? 'Today' : dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          return {
+            ...f,
+            day: dayName,
+            date: dateStr,
+            tempAvg: Math.round(((f.tempMax ?? 30) + (f.tempMin ?? 20)) / 2),
+          };
+        });
+        setForecastData(formatted);
       } else {
         setForecastData(FALLBACK_FORECAST);
       }
     } catch (err) {
       setForecastData(FALLBACK_FORECAST);
+    }
+  };
+
+  // Fetch Crop Recommendations
+  const fetchRecommendations = async () => {
+    try {
+      const res = await getCropRecommendations();
+      if (res?.success && Array.isArray(res.data)) {
+        setCropRecommendations(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch recommendations:', err);
     }
   };
 
@@ -232,7 +257,12 @@ const Dashboard = () => {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchDashboard(), fetchForecast(), fetchAnalytics(analyticsPeriod)]);
+      await Promise.all([
+        fetchDashboard(),
+        fetchForecast(),
+        fetchRecommendations(),
+        fetchAnalytics(analyticsPeriod),
+      ]);
       setLoading(false);
     };
     init();
@@ -253,6 +283,7 @@ const Dashboard = () => {
     await Promise.all([
       fetchDashboard(),
       fetchForecast(),
+      fetchRecommendations(),
       fetchMarketChart(selectedCrop, selectedPeriod),
       fetchAnalytics(analyticsPeriod),
     ]);
@@ -313,6 +344,30 @@ const Dashboard = () => {
   // Calculate Market Overview Stats
   const topCropPrice = Math.max(...CROP_PRICE_COMPARISON_DATA.map((c) => c.price));
   const lowestCropPrice = Math.min(...CROP_PRICE_COMPARISON_DATA.map((c) => c.price));
+
+  const todayForecast = forecastData[0] || {
+    tempAvg: 28,
+    tempMin: 22,
+    rainfallMm: 0.0,
+    rainProbability: 10,
+    condition: 'Clear Sky',
+    windSpeed: 12
+  };
+
+  const STAGE_PROGRESS = {
+    'Initial / Germination': '10%',
+    'Vegetative': '30%',
+    'Flowering': '60%',
+    'Yield Formation / Fruiting': '85%',
+    'Ripening / Harvesting': '100%',
+  };
+  const progressPct = STAGE_PROGRESS[farm?.growthStage] || '30%';
+
+  const currentCropRec = cropRecommendations.find(
+    (r) => r.crop.toLowerCase() === (farm?.currentCrop || 'wheat').toLowerCase()
+  );
+  const cropMatchScore = currentCropRec ? `${currentCropRec.score}%` : '95%';
+  const cropMatchText = currentCropRec ? 'Optimal Soil Match' : 'NPK Baselines Fit';
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 text-slate-900 selection:bg-emerald-600 selection:text-white">
@@ -523,8 +578,10 @@ const Dashboard = () => {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-black text-slate-900">28°C</p>
-            <span className="text-[11px] font-semibold text-slate-500">Clear Sky • 22° Min</span>
+            <p className="text-2xl font-black text-slate-900">{todayForecast.tempAvg || 28}°C</p>
+            <span className="text-[11px] font-semibold text-slate-500">
+              {todayForecast.condition || 'Clear Sky'} • {todayForecast.tempMin || 22}° Min
+            </span>
           </div>
         </div>
 
@@ -539,9 +596,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-black text-slate-900">0.0 mm</p>
+            <p className="text-2xl font-black text-slate-900">{todayForecast.rainfallMm || 0.0} mm</p>
             <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-              10% Rain Chance
+              {todayForecast.rainProbability || 0}% Rain Chance
             </span>
           </div>
         </div>
@@ -557,11 +614,13 @@ const Dashboard = () => {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-black text-slate-900">₹{market?.currentPrice || 2450}</p>
+            <p className="text-2xl font-black text-slate-900">
+              {market?.currentPrice ? `₹${market.currentPrice}` : 'N/A'}
+            </p>
             <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-              <ArrowUpRight size={13} />
+              {market?.changePercent !== undefined && <ArrowUpRight size={13} />}
               <span>
-                {farm?.currentCrop || 'Wheat'} (+{market?.changePercent || 4.2}%)
+                {farm?.currentCrop || 'Wheat'} {market?.changePercent !== undefined ? `(+${market.changePercent}%)` : ''}
               </span>
             </div>
           </div>
@@ -578,9 +637,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-black text-slate-900">95%</p>
+            <p className="text-2xl font-black text-slate-900">{cropMatchScore}</p>
             <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
-              Optimal NPK Fit
+              {cropMatchText}
             </span>
           </div>
         </div>
@@ -601,9 +660,9 @@ const Dashboard = () => {
             </p>
             <div className="flex items-center gap-1 mt-1">
               <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden shrink-0">
-                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '50%' }} />
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: progressPct }} />
               </div>
-              <span className="text-[9px] font-semibold text-slate-500 ml-1">50% Progress</span>
+              <span className="text-[9px] font-semibold text-slate-500 ml-1">{progressPct} Progress</span>
             </div>
           </div>
         </div>
@@ -619,8 +678,12 @@ const Dashboard = () => {
             </div>
           </div>
           <div>
-            <p className="text-2xl font-black text-emerald-700">Good (Safe)</p>
-            <span className="text-[11px] font-semibold text-slate-500">No Frost Risk</span>
+            <p className={`text-2xl font-black ${weatherAlert?.hasRisk ? 'text-rose-700' : 'text-emerald-700'}`}>
+              {weatherAlert?.hasRisk ? 'Risk Alert' : 'Good (Safe)'}
+            </p>
+            <span className="text-[11px] font-semibold text-slate-500">
+              {weatherAlert?.risks?.[0] || 'No severe alerts'}
+            </span>
           </div>
         </div>
       </div>
@@ -1125,8 +1188,7 @@ const Dashboard = () => {
                 <Sun size={15} className="text-blue-600" /> Weather Insight & Advice
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Clear skies expected over the next 48 hours. Rainfall probability remains low at
-                10%.
+                {todayForecast.condition || 'Clear Sky'} expected today. Rainfall probability is {todayForecast.rainProbability || 0}%.
                 <span className="block mt-1 font-bold text-emerald-800">
                   💡 Best farming window: 6 AM to 10 AM.
                 </span>
@@ -1139,10 +1201,9 @@ const Dashboard = () => {
                 <TrendingUp size={15} className="text-emerald-600" /> Market Price Forecast
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                {selectedCrop} mandi rates increased +4.2% over 7 days. Higher rates expected near
-                weekend.
+                {selectedCrop} mandi rates {market?.trend === 'Rising' ? 'increased' : 'are stable'} {market?.changePercent ? `(+${market.changePercent}%)` : ''} over last 7 days.
                 <span className="block mt-1 font-bold text-emerald-800">
-                  📈 Hold stock: Expected next week peak: +₹120/q.
+                  📈 {market?.sellingInsightText || 'Prices are stable. Monitor rates before selling.'}
                 </span>
               </p>
             </div>
@@ -1153,10 +1214,9 @@ const Dashboard = () => {
                 <Sprout size={15} className="text-purple-600" /> Crop Health & Nutrition
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Soil moisture is balanced (68%). NPK nutrient uptake is optimal for{' '}
-                {farm?.growthStage || 'Vegetative'} growth.
+                Soil moisture is {todaysAction?.decision === 'DONT_IRRIGATE' ? 'adequate' : 'low'} ({100 - (todaysAction?.reasoning?.soilDepletionPct || 50)}%). Diagnostic status is {cropHealth?.possibleIssue || 'Normal'}.
                 <span className="block mt-1 font-bold text-emerald-800">
-                  🛡️ Farm Health Score: 92% (Excellent).
+                  🛡️ Action: {cropHealth?.nextAction || 'Regular field scouting recommended.'}
                 </span>
               </p>
             </div>
@@ -1170,7 +1230,7 @@ const Dashboard = () => {
                 {todaysAction?.reasoning?.actionableAdvice ||
                   'No irrigation required today. Save pumping costs.'}
                 <span className="block mt-1 font-bold text-cyan-800">
-                  💧 Estimated Water Saved: 14,250 Liters.
+                  💧 Estimated Water Saved: {Math.round(5.0 * (farm?.landSize?.value || 5) * 4046.86).toLocaleString()} Liters.
                 </span>
               </p>
             </div>
@@ -1184,23 +1244,18 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] font-semibold text-slate-600 leading-normal">
               <div className="space-y-1">
                 <p>
-                  <span className="text-slate-500 font-bold">Why:</span> Moisture level (68%)
-                  exceeds the dry threshold (50%), making additional watering unnecessary today.
+                  <span className="text-slate-500 font-bold">Why:</span> {todaysAction?.reasoning?.summaryText || `Soil moisture depletion is optimal.`}
                 </p>
                 <p>
-                  <span className="text-slate-500 font-bold">Expected Crop Impact:</span> Prevents
-                  root oxygen stress and saves ₹1,200 in pumping electricity costs.
+                  <span className="text-slate-500 font-bold">Expected Crop Impact:</span> {todaysAction?.decision === 'IRRIGATE' ? 'Replenishes soil root zone to prevent crop moisture stress.' : 'Prevents over-irrigation and root oxygen stress.'}
                 </p>
               </div>
               <div className="space-y-1">
                 <p>
-                  <span className="text-slate-500 font-bold">Confidence Score:</span> 96% based on
-                  micro-climatic sensor alignment.
+                  <span className="text-slate-500 font-bold">Confidence Score:</span> {todaysAction?.confidence ? `${(todaysAction.confidence * 100).toFixed(0)}%` : '90%'} based on micro-climatic sensor alignment.
                 </p>
                 <p>
-                  <span className="text-slate-500 font-bold">Operations to Avoid:</span> Avoid
-                  applying granular fertilizers during high wind speeds forecast for tomorrow
-                  afternoon.
+                  <span className="text-slate-500 font-bold">Operations to Avoid:</span> {todayForecast.windSpeed > 20 ? 'Avoid foliar sprays due to high wind speed.' : 'No operational weather constraints today.'}
                 </p>
               </div>
             </div>

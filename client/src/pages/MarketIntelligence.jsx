@@ -139,18 +139,10 @@ const MarketIntelligence = () => {
   const maxPrice = marketData?.maxPrice || Math.round(currentPrice * 1.05);
   const avgPrice = marketData?.avgPrice || Math.round((minPrice + maxPrice) / 2);
 
-  const bestMarketItem = (
-    nearbyMarkets.length > 0
-      ? nearbyMarkets
-      : [
-          { market: 'Bhopal Mandi', price: currentPrice + 120, distanceKm: 45 },
-          { market: 'Indore Mandi', price: currentPrice, distanceKm: 0 },
-          { market: 'Ujjain Mandi', price: currentPrice - 50, distanceKm: 55 },
-        ]
-  ).reduce((max, item) => (item.price > max.price ? item : max), {
-    price: 0,
-    market: primaryMarket,
-  });
+  const bestMarketItem = (nearbyMarkets.length > 0 ? nearbyMarkets : [{ market: primaryMarket, price: currentPrice, distanceKm: 0 }]).reduce(
+    (max, item) => (item.price > max.price ? item : max),
+    { price: 0, market: primaryMarket }
+  );
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 text-slate-900 selection:bg-emerald-600 selection:text-white">
@@ -387,16 +379,7 @@ const MarketIntelligence = () => {
           <div className="h-52 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={
-                  nearbyMarkets.length > 0
-                    ? nearbyMarkets
-                    : [
-                        { market: 'Indore', price: currentPrice, fill: '#10B981' },
-                        { market: 'Bhopal', price: currentPrice + 120, fill: '#3B82F6' },
-                        { market: 'Ujjain', price: currentPrice - 50, fill: '#F59E0B' },
-                        { market: 'Dewas', price: currentPrice + 30, fill: '#8B5CF6' },
-                      ]
-                }
+                data={nearbyMarkets}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="market" stroke="#94a3b8" fontSize={10} />
@@ -604,25 +587,23 @@ const MarketIntelligence = () => {
                     </span>
                   </td>
                 </tr>
-                {(nearbyMarkets.length > 0
-                  ? nearbyMarkets
-                  : [
-                      { market: 'Bhopal Mandi', price: currentPrice + 120 },
-                      { market: 'Ujjain Mandi', price: currentPrice - 50 },
-                    ]
-                ).map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
-                    <td className="py-2.5 font-bold">{selectedCrop}</td>
-                    <td className="py-2.5 text-slate-600">{item.market}</td>
-                    <td className="py-2.5 font-extrabold text-slate-900">₹{item.price}</td>
-                    <td className="py-2.5 text-emerald-700 font-bold">+3.5%</td>
-                    <td className="py-2.5 text-right">
-                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded border border-emerald-200 text-[11px]">
-                        Rising
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {nearbyMarkets
+                  .filter((m) => m.market.toLowerCase() !== primaryMarket.toLowerCase())
+                  .map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="py-2.5 font-bold">{selectedCrop}</td>
+                      <td className="py-2.5 text-slate-600">{item.market}</td>
+                      <td className="py-2.5 font-extrabold text-slate-900">₹{item.price}</td>
+                      <td className="py-2.5 text-emerald-700 font-bold">
+                        {item.changePercent >= 0 ? `+${item.changePercent}` : item.changePercent}%
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded border border-emerald-200 text-[11px]">
+                          {item.changePercent > 0 ? 'Rising' : item.changePercent < 0 ? 'Falling' : 'Stable'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

@@ -89,7 +89,13 @@ export const evaluateCropHealth = async (
 
       const result = await model.generateContent([prompt, imagePart]);
       const responseText = result.response.text();
-      const cleanJsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      const jsonStart = responseText.indexOf('{');
+      const jsonEnd = responseText.lastIndexOf('}');
+      if (jsonStart === -1 || jsonEnd === -1) {
+        throw new Error('No JSON object found in Gemini response');
+      }
+      const cleanJsonStr = responseText.substring(jsonStart, jsonEnd + 1);
       const aiResult = JSON.parse(cleanJsonStr);
 
       if (aiResult.isValid) {
@@ -213,28 +219,28 @@ export const evaluateCropHealth = async (
     if (isBlank) {
       return {
         isValid: false,
-        message: 'Please upload a clear image of a crop or plant leaf.',
+        message: 'Please upload a clear crop or leaf image. Blank or empty images are not accepted.',
       };
     }
 
     if (avgGradient < 1.8) {
       return {
         isValid: false,
-        message: 'Please upload a clear image of a crop or plant leaf.',
+        message: 'Please upload a clear crop or leaf image. Blurry or low-quality images are not accepted.',
       };
     }
 
     if (skinPct > 35) {
       return {
         isValid: false,
-        message: 'Please upload a clear image of a crop or plant leaf.',
+        message: 'Please upload a clear crop or leaf image. Human skin or body parts are not accepted.',
       };
     }
 
     if (plantPct < 15) {
       return {
         isValid: false,
-        message: 'Please upload a clear image of a crop or plant leaf.',
+        message: 'Please upload a clear crop or leaf image. Non-crop objects (vehicles, animals, buildings, or documents) are not accepted.',
       };
     }
 

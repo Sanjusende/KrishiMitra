@@ -106,6 +106,17 @@ const CropHealth = () => {
       const res = await analyzeCropHealth(formData);
       if (res.success) {
         setCurrentResult(res.data);
+        if (
+          farm?.currentCrop &&
+          res.data?.crop &&
+          farm.currentCrop.toLowerCase() !== res.data.crop.toLowerCase()
+        ) {
+          setWarning(
+            `Selected crop is ${farm.currentCrop}, but the uploaded image appears to be ${res.data.crop}.`
+          );
+        } else {
+          setWarning(null);
+        }
         fetchHistory();
       }
     } catch (err) {
