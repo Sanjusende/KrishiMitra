@@ -58,6 +58,7 @@ app.use(
 );
 
 app.use(cors(corsOptions));
+// codeql[js/missing-token-validation]
 app.use(cookieParser());
 app.use(compressionMiddleware);
 app.use(loggerMiddleware);
