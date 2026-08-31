@@ -105,13 +105,25 @@ const csrfMiddleware = (req, res, next) => {
     return next();
   }
 
-  // 2. Bypass CSRF if there are no session cookies to forge
+  // 2. Bypass CSRF for public auth endpoints (login, register, token refresh, password resets)
+  const bypassUrls = [
+    '/login',
+    '/register',
+    '/refresh-token',
+    '/forgot-password',
+    '/reset-password'
+  ];
+  if (bypassUrls.some(url => req.path.endsWith(url))) {
+    return next();
+  }
+
+  // 3. Bypass CSRF if there are no session cookies to forge
   const hasAuthCookies = !!(req.cookies?.accessToken || req.cookies?.token || req.cookies?.refreshToken);
   if (!hasAuthCookies) {
     return next();
   }
 
-  // 3. Otherwise, enforce double-submit CSRF protection
+  // 4. Otherwise, enforce double-submit CSRF protection
   return doubleCsrfProtection(req, res, next);
 };
 
