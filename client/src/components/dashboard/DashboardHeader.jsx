@@ -266,8 +266,10 @@ const DashboardHeader = ({
           >
             <span className={isDemoMode ? 'text-amber-500 animate-pulse' : 'text-slate-500'}>⚡</span>
             <span>Demo: {isDemoMode ? 'ON' : 'OFF'}</span>
-          <            {/* Weather status capsule trigger */}
-            <div className="relative" ref={weatherRef}>
+          </button>
+
+          {/* Weather status capsule trigger */}
+          <div className="relative" ref={weatherRef}>
               <button
                 onClick={() => setWeatherOpen(!weatherOpen)}
                 className={`p-2 rounded-2xl bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer transition shadow-xs ${weatherOpen ? 'ring-2 ring-emerald-500/20' : ''}`}

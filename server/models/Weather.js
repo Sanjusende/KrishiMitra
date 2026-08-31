@@ -102,6 +102,6 @@ const weatherSchema = new mongoose.Schema(
 
 weatherSchema.index({ latitude: 1, longitude: 1, fetchedAt: -1 });
 
-const Weather = mongoose.model('Weather', weatherSchema);
+const Weather = mongoose.model('Weather', weatherSchema, 'weathers');
 
 export default Weather;

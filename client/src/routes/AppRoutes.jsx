@@ -21,6 +21,7 @@ const MarketIntelligence = lazy(() => import('../pages/MarketIntelligence'));
 const VoiceAssistant = lazy(() => import('../pages/VoiceAssistant'));
 const FertilizerPlanning = lazy(() => import('../pages/FertilizerPlanning'));
 const CropRecommendation = lazy(() => import('../pages/CropRecommendation'));
+const AdminRoutes = lazy(() => import('../admin/routes/AdminRoutes'));
 
 /**
  * Route guard for protected routes.
@@ -177,6 +178,9 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin Subsystem Routes */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
 
         {/* Catch all 404 route */}
         <Route path="*" element={<NotFound />} />

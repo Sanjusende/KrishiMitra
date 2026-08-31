@@ -113,6 +113,6 @@ cropHealthSchema.index({
   reportedAt: -1,
 });
 
-const CropHealth = mongoose.model('CropHealth', cropHealthSchema);
+const CropHealth = mongoose.model('CropHealth', cropHealthSchema, 'crophealths');
 
 export default CropHealth;

@@ -204,6 +204,6 @@ voiceQuerySchema.index({
 // Model
 // ------------------------------------------------------
 
-const VoiceQuery = mongoose.model('VoiceQuery', voiceQuerySchema);
+const VoiceQuery = mongoose.model('VoiceQuery', voiceQuerySchema, 'voicequeries');
 
 export default VoiceQuery;

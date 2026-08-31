@@ -54,6 +54,6 @@ const marketPriceSchema = new mongoose.Schema(
 
 marketPriceSchema.index({ crop: 1, date: -1 });
 
-const MarketPrice = mongoose.model('MarketPrice', marketPriceSchema);
+const MarketPrice = mongoose.model('MarketPrice', marketPriceSchema, 'marketprices');
 
 export default MarketPrice;

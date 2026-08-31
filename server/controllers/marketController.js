@@ -38,12 +38,14 @@ export const getCurrentMarketData = async (req, res, next) => {
   }
 };
 
+const escapeRegExp = (str) => String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const getMarketHistory = async (req, res, next) => {
   try {
-    const cropName = req.query.crop || 'Wheat';
-    const stateName = req.query.state || '';
-    const districtName = req.query.district || '';
-    const period = req.query.period || '7d';
+    const cropName = String(req.query.crop || 'Wheat');
+    const stateName = String(req.query.state || '');
+    const districtName = String(req.query.district || '');
+    const period = String(req.query.period || '7d');
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
 
@@ -71,9 +73,9 @@ export const getMarketHistory = async (req, res, next) => {
 
     // Build DB Query Filter
     const filter = {
-      crop: new RegExp(`^${cropName}$`, 'i'),
-      state: new RegExp(`^${finalState}$`, 'i'),
-      district: new RegExp(`^${finalDistrict}$`, 'i'),
+      crop: new RegExp(`^${escapeRegExp(cropName)}$`, 'i'),
+      state: new RegExp(`^${escapeRegExp(finalState)}$`, 'i'),
+      district: new RegExp(`^${escapeRegExp(finalDistrict)}$`, 'i'),
     };
 
     // Apply Date Range Filter if provided

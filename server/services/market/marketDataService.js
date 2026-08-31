@@ -208,15 +208,30 @@ export const fetchCropMarketData = async (
     await syncAgmarknetPrices(crop, state, district);
   }
 
-  // 2. Fetch stored history from database for the specific market
+  const escapeRegExp = (str) => String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // 2. Fetch stored history from database
   let databaseRecords = await MarketPrice.find({
     crop,
-    market: new RegExp(`^${market}$`, 'i'),
-    state: new RegExp(`^${state}$`, 'i'),
+    market: new RegExp(`^${escapeRegExp(market)}$`, 'i'),
+    state: new RegExp(`^${escapeRegExp(state)}$`, 'i'),
+    district: new RegExp(`^${escapeRegExp(district)}$`, 'i'),
   })
     .sort({ date: 1 })
     .limit(HISTORY_DAYS)
     .lean();
+
+  // If no records found for the specific market, fallback to state/district level records
+  if (databaseRecords.length === 0) {
+    databaseRecords = await MarketPrice.find({
+      crop,
+      state: new RegExp(`^${escapeRegExp(state)}$`, 'i'),
+      district: new RegExp(`^${escapeRegExp(district)}$`, 'i'),
+    })
+      .sort({ date: 1 })
+      .limit(HISTORY_DAYS)
+      .lean();
+  }
 
   let history90d = databaseRecords;
   let isLiveData = databaseRecords.length > 0;
@@ -291,7 +306,7 @@ export const fetchCropMarketData = async (
 
   const stateRecords = await MarketPrice.find({
     crop,
-    state: new RegExp(`^${state}$`, 'i'),
+    state: new RegExp(`^${escapeRegExp(state)}$`, 'i'),
     date: { $gte: cutoffDate },
   }).sort({ date: -1 }).lean();
 

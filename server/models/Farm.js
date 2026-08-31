@@ -91,6 +91,6 @@ const farmSchema = new mongoose.Schema(
 // 2dsphere index for location-based spatial queries (community alerts, weather proximity)
 farmSchema.index({ 'location.lat': 1, 'location.lng': 1 });
 
-const Farm = mongoose.model('Farm', farmSchema);
+const Farm = mongoose.model('Farm', farmSchema, 'farms');
 
 export default Farm;

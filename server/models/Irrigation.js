@@ -40,6 +40,6 @@ const irrigationSchema = new mongoose.Schema(
 
 irrigationSchema.index({ farmId: 1, date: -1 });
 
-const Irrigation = mongoose.model('Irrigation', irrigationSchema);
+const Irrigation = mongoose.model('Irrigation', irrigationSchema, 'irrigations');
 
 export default Irrigation;

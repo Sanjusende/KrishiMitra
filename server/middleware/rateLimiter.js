@@ -55,3 +55,18 @@ export const generalLimiter = createLimiter(
   100, // Limit to 100 requests per window
   'Too many requests. Please try again after 15 minutes.'
 );
+
+// 7. Admin Panel — General API limiter (all protected admin routes)
+export const adminLimiter = createLimiter(
+  15 * 60 * 1000, // 15 mins
+  120, // Limit to 120 requests per window
+  'Too many admin API requests. Please try again after 15 minutes.'
+);
+
+// 8. Admin Panel — Login / Register (highly sensitive, strict)
+export const adminAuthLimiter = createLimiter(
+  15 * 60 * 1000, // 15 mins
+  5, // Only 5 login/register attempts per IP per window
+  'Too many admin authentication attempts. Please try again after 15 minutes.'
+);
+
