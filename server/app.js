@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { doubleCsrf } from 'csrf-csrf';
 import mongoSanitize from 'express-mongo-sanitize';
-import { doubleCsrf } from 'csrf-csrf';
 import hpp from 'hpp';
 import env from './config/env.js';
 import corsOptions from './config/cors.js';
@@ -58,22 +57,8 @@ app.use(
   })
 );
 
-const {
-  generateToken,
-  doubleCsrfProtection,
-} = doubleCsrf({
-  getSecret: () => env.JWT_SECRET,
-  cookieName: '__Host-csrf-token',
-  cookieOptions: {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-  },
-});
-
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(doubleCsrfProtection);
 app.use(compressionMiddleware);
 app.use(loggerMiddleware);
 
